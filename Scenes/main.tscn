@@ -1,0 +1,50 @@
+[gd_scene load_steps=7 format=3 uid="uid://cb4o2mjfdlaeh"]
+
+[ext_resource type="PackedScene" uid="uid://4c7wjocl4mx6" path="res://Scenes/agent.tscn" id="1_2570i"]
+[ext_resource type="PackedScene" uid="uid://bau7307l4pu64" path="res://Scenes/obstacle.tscn" id="2_5w60u"]
+[ext_resource type="Script" path="res://Scripts/CameraController.cs" id="3_5effp"]
+[ext_resource type="PackedScene" uid="uid://dm4tmxv4skfle" path="res://Scenes/hill.tscn" id="4_tfyhj"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_tl5cr"]
+
+[sub_resource type="ConvexPolygonShape3D" id="ConvexPolygonShape3D_c141p"]
+points = PackedVector3Array(-1, 0, -1, -1, 0, 1, 1, 0, -1, 1, 0, 1)
+
+[node name="Main" type="Node"]
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.93916, 0.343479, 0, -0.343479, 0.93916, 0, 0, 0)
+
+[node name="Agent" parent="." instance=ExtResource("1_2570i")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -2)
+Goal = Vector3(0, 0, 6)
+PreferredSpeed = 1.3
+
+[node name="Obstacle" parent="." instance=ExtResource("2_5w60u")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 1, -8)
+
+[node name="Obstacle2" parent="." instance=ExtResource("2_5w60u")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 1, -8)
+
+[node name="Agent2" parent="." instance=ExtResource("1_2570i")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, 0)
+Goal = Vector3(0, 0, -9)
+PreferredSpeed = 1.3
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.28833, 4.48772)
+script = ExtResource("3_5effp")
+
+[node name="Ground" type="StaticBody3D" parent="."]
+transform = Transform3D(20, 0, 0, 0, 20, 0, 0, 0, 20, 0, 0, 0)
+collision_layer = 4
+collision_mask = 0
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Ground"]
+mesh = SubResource("PlaneMesh_tl5cr")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Ground"]
+shape = SubResource("ConvexPolygonShape3D_c141p")
+
+[node name="Hill" parent="." instance=ExtResource("4_tfyhj")]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -0.122, 0.25, 3.05413)
