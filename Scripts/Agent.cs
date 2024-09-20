@@ -14,6 +14,8 @@ public partial class Agent : CharacterBody3D
     /// <summary>Returns the agent's preferred walking speed.</summary>
     [Export]
     public float PreferredSpeed { get; set; }  
+
+    public float MaxAcceleration { get; set; } = 5;
     
     
     /// <summary>Returns the agent's last computed preferred velocity.</summary>
@@ -27,7 +29,7 @@ public partial class Agent : CharacterBody3D
     public float RelaxationTime { get; private set; } = 0.5f;   
 
     /// <summary>
-    /// Spherical rays used to detect neighbors
+    /// Spherical rays used to detect neighbors per frame.
     /// </summary>
     private ShapeCast3D _shapeCast;
 
@@ -40,6 +42,16 @@ public partial class Agent : CharacterBody3D
     public IReadOnlyList<Vector3> NeighborObstacleNearestPoints => _neighborObstacleNearestPoints.AsReadOnly();
 
     private List<CostFunction> _costFunctions;
+    public IReadOnlyList<CostFunction> CostFunctions => _costFunctions.AsReadOnly();
+
+    public enum PolicyType
+    {
+        GRADIENT, SAMPLING,
+    }
+    /// <summary>
+    /// 成本函数的求解方式
+    /// </summary>
+    public PolicyType OptMethod { get; protected set; } = PolicyType.GRADIENT;
 
     public override void _Ready()
     {
@@ -53,6 +65,7 @@ public partial class Agent : CharacterBody3D
         _neighborObstacleNearestPoints = new List<Vector3>();
         _costFunctions = new List<CostFunction>();
         
+        //TODO: 添加该agent的cost functions
         _costFunctions.Add(new GoalReachingForce(this, 1));
         _costFunctions.Add(new SocialForcesAvoidance(this, 1));
         
@@ -75,6 +88,7 @@ public partial class Agent : CharacterBody3D
         ComputeAccelerationAndVelocity(delta);
         
         PlayAnimation();
+
     }
     
     private void GetInput()
@@ -119,6 +133,10 @@ public partial class Agent : CharacterBody3D
         
     }
 
+    /// <summary>
+    /// 判断是否已到达目标点。若当前位置与目标点距离小于1，则视为已到达目标。
+    /// </summary>
+    /// <returns>bool值，是否到达目标点</returns>
     private bool HasReachedGoal()
     {
         return (Goal - Position).LengthSquared() < 1f;
@@ -133,13 +151,24 @@ public partial class Agent : CharacterBody3D
         PreferredVelocity = (Goal - Position).Normalized() * PreferredSpeed;
     }
 
+    /// <summary>
+    /// 根据cost函数，计算加速度与速度。
+    /// </summary>
+    /// <param name="delta">每帧时间间隔</param>
     private void ComputeAccelerationAndVelocity(double delta)
     {
         Vector3 acceleration = Vector3.Zero;
         
-        foreach (var costFunction in _costFunctions)
+        if (OptMethod == PolicyType.GRADIENT)
         {
-            acceleration += costFunction.CalculateCostGradient(Velocity);
+            foreach (var costFunction in _costFunctions)
+            {        
+                acceleration += costFunction.CalculateCostGradient(Velocity);        
+            }
+        }
+        else
+        {
+
         }
 
         if (acceleration.LengthSquared()>25)
@@ -156,6 +185,9 @@ public partial class Agent : CharacterBody3D
         }
     }
 
+    /// <summary>
+    /// 播放动画
+    /// </summary>
     private void PlayAnimation()
     {
         // GD.Print("v: "+Velocity);
