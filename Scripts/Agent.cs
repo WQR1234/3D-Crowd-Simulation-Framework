@@ -5,6 +5,9 @@ using CostFunctions;
 
 public partial class Agent : CharacterBody3D
 {
+    public static bool IsPause = false;
+    private bool _isShowLabels = false;
+
     [Export]
     public float MaxSpeed { get; set; } = 1.6f;
     
@@ -29,12 +32,26 @@ public partial class Agent : CharacterBody3D
     public float RelaxationTime { get; private set; } = 0.5f;   
 
     /// <summary>
-    /// Spherical rays used to detect neighbors per frame.
+    /// 球形射线节点。Spherical rays used to detect neighbors per frame.
     /// </summary>
     private ShapeCast3D _shapeCast;
 
+    /// <summary>
+    /// 动画节点
+    /// </summary>
     private AnimationPlayer _animation;
+
+    /// <summary>
+    /// 模型节点
+    /// </summary>
     private Node3D _modelNode;
+
+    /// <summary>
+    /// UI节点
+    /// </summary>
+    private Sprite3D _spriteNode;
+    private Label _posLabel;
+    private Label _velLabel;
 
     private List<Agent> _neighborAgents;
     public IReadOnlyList<Agent> NeighborAgents => _neighborAgents.AsReadOnly();
@@ -61,6 +78,10 @@ public partial class Agent : CharacterBody3D
 
         _animation = GetNode<AnimationPlayer>("Model/RootNode/AnimationPlayer");
 
+        _spriteNode = GetNode<Sprite3D>("Sprite3D");
+        _posLabel = GetNode<Label>("Sprite3D/SubViewport/VBoxContainer/PositionLabel");
+        _velLabel = GetNode<Label>("Sprite3D/SubViewport/VBoxContainer/VelocityLabel");
+
         _neighborAgents = new List<Agent>();
         _neighborObstacleNearestPoints = new List<Vector3>();
         _costFunctions = new List<CostFunction>();
@@ -81,6 +102,17 @@ public partial class Agent : CharacterBody3D
         // }
 
         // GetInput();
+
+        if (IsPause) 
+        {
+            _animation.Stop();
+            return;
+        }
+
+        if (_isShowLabels)
+        {
+            UpdateAgentLabels();
+        }
 
         ComputeNeighbors();
         
@@ -202,5 +234,48 @@ public partial class Agent : CharacterBody3D
         {
             _animation.Play("BasicMotions@Idle01/BasicMotions_Idle01");
         }
+    }
+
+    private void OnInputEvent(Node camera, InputEvent @event , Vector3 event_position, Vector3 normal, int shape_idx)
+    {
+        if (@event is InputEventMouseButton mouseButton)
+        {
+            if (mouseButton.ButtonIndex == MouseButton.Left)
+            {
+                if (!mouseButton.IsPressed())
+                {
+                    // GD.Print(camera.Name);
+                    // GD.Print(this.Name);
+                    _isShowLabels = !_isShowLabels;
+                    ShowOrHideLabels(_isShowLabels);
+                }
+            }
+            
+        }
+    }
+
+    /// <summary>
+    /// 显示或隐藏标签
+    /// </summary>
+    /// <param name="isShow">是否显示</param>
+    private void ShowOrHideLabels(bool isShow)
+    {
+        if (isShow)
+        {
+            _spriteNode.Show();
+            UpdateAgentLabels();
+        }
+            
+        else
+            _spriteNode.Hide();
+    }
+
+    /// <summary>
+    /// 更新该Agent的标签这的文本信息
+    /// </summary>
+    private void UpdateAgentLabels()
+    {
+        _posLabel.Text = "位置： "+Position.ToString("0.00");
+        _velLabel.Text = "速度： "+Velocity.ToString("0.00");
     }
 }

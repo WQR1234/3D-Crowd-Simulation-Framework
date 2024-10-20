@@ -19,9 +19,10 @@ public partial class CameraController : Node3D
 
     public override void _Input(InputEvent @event)
     {
+        // 若是鼠标点击事件
         if (@event is InputEventMouseButton mouseButton)
         {
-            if (mouseButton.ButtonIndex==MouseButton.Right)
+            if (mouseButton.ButtonIndex==MouseButton.Right) // 若是鼠标右键
             {
                 // GD.Print(Transform.Basis.Z);
                 _canCameraRotate = !_canCameraRotate;

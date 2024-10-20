@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://4c7wjocl4mx6"]
+[gd_scene load_steps=8 format=3 uid="uid://4c7wjocl4mx6"]
 
 [ext_resource type="Script" path="res://Scripts/Agent.cs" id="1_tkwse"]
 [ext_resource type="PackedScene" uid="uid://wd5cmt7l84dr" path="res://Assets/Banana Man.fbx" id="2_md83k"]
@@ -9,6 +9,9 @@
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_a0ekf"]
 radius = 5.0
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_3e31c"]
+viewport_path = NodePath("Sprite3D/SubViewport")
 
 [node name="Agent" type="CharacterBody3D"]
 collision_mask = 7
@@ -85,5 +88,29 @@ shape = SubResource("CapsuleShape3D_8bs1k")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
 shape = SubResource("SphereShape3D_a0ekf")
 collision_mask = 3
+
+[node name="Sprite3D" type="Sprite3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+visible = false
+billboard = 1
+texture = SubResource("ViewportTexture_3e31c")
+
+[node name="SubViewport" type="SubViewport" parent="Sprite3D"]
+transparent_bg = true
+size = Vector2i(180, 64)
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Sprite3D/SubViewport"]
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="PositionLabel" type="Label" parent="Sprite3D/SubViewport/VBoxContainer"]
+layout_mode = 2
+text = "位置："
+
+[node name="VelocityLabel" type="Label" parent="Sprite3D/SubViewport/VBoxContainer"]
+layout_mode = 2
+text = "速度："
+
+[connection signal="input_event" from="." to="." method="OnInputEvent"]
 
 [editable path="Model"]

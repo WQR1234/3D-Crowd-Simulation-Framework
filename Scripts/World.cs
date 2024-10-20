@@ -20,6 +20,8 @@ public partial class World : Node
 	public override void _PhysicsProcess(double delta)
 	{
 		base._PhysicsProcess(delta);
+
+		if (Agent.IsPause) return;
 		DeltaTime = (float)delta;
 
 		foreach (var agent in AllAgents)
