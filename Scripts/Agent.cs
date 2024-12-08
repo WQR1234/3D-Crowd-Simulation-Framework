@@ -5,7 +5,7 @@ using CostFunctions;
 
 public partial class Agent : CharacterBody3D
 {
-    public static bool IsPause = false;
+    private Vector3 _acceleration;
     private bool _isShowLabels = false;
 
     [Export]
@@ -53,6 +53,9 @@ public partial class Agent : CharacterBody3D
     private Label _posLabel;
     private Label _velLabel;
 
+    private NavigationAgent3D _navigationAgent;
+    private Vector3 _localGoal;  // 局部（临时）目标点
+
     private List<Agent> _neighborAgents;
     public IReadOnlyList<Agent> NeighborAgents => _neighborAgents.AsReadOnly();
     private List<Vector3> _neighborObstacleNearestPoints;
@@ -82,28 +85,59 @@ public partial class Agent : CharacterBody3D
         _posLabel = GetNode<Label>("Sprite3D/SubViewport/VBoxContainer/PositionLabel");
         _velLabel = GetNode<Label>("Sprite3D/SubViewport/VBoxContainer/VelocityLabel");
 
+        _navigationAgent = GetNode<NavigationAgent3D>("NavigationAgent3D");
+        _navigationAgent.TargetPosition = Goal;   // 设置目标点
+
         _neighborAgents = new List<Agent>();
         _neighborObstacleNearestPoints = new List<Vector3>();
         _costFunctions = new List<CostFunction>();
         
-        //TODO: 添加该agent的cost functions
-        _costFunctions.Add(new GoalReachingForce(this, 1));
-        _costFunctions.Add(new SocialForcesAvoidance(this, 1));
+        // TODO: 添加该agent的cost functions
+        //_costFunctions.Add(new GoalReachingForce(this, 1));
+        //_costFunctions.Add(new SocialForcesAvoidance(this, 1));
         
         
         World.Instance.AllAgents.Add(this);
+        
+        GD.Print("agent: "+this.Name+" ready");
+    }
+
+    /// <summary>
+    /// 根据json数据添加cost function, cost function的名字必须为CostFunctions命名空间下已有的类。
+    /// </summary>
+    /// <param name="costFunctionData">json数据中的每1条cost function数据</param>
+    public void AddCostFunction(Godot.Collections.Dictionary costFunctionData)
+    {
+        string costFunctionName = costFunctionData["name"].AsString();
+        costFunctionName = "CostFunctions." + costFunctionName;
+        
+        Type costFunctionType = Type.GetType(costFunctionName);
+        if (costFunctionType==null)
+        {
+            GD.Print($"There is no cost function {costFunctionName}.");
+            return;
+        }
+
+        float weight = costFunctionData["weight"].AsSingle();
+        object[] costFunctionArgs = { this, weight };
+
+        var costFunctionInstance = Activator.CreateInstance(costFunctionType, costFunctionArgs) as CostFunction;
+        
+        _costFunctions.Add(costFunctionInstance);
     }
 
     public override void _PhysicsProcess(double delta)
     {
-        // if (Name=="Agent")
-        // {
-        //     return;
-        // }
+        if (Name=="Agent2")
+        {
+            return;
+        }
 
         // GetInput();
+        
+        // GD.Print(this.Name+" process");
 
-        if (IsPause) 
+        if (World.IsPause) 
         {
             _animation.Stop();
             return;
@@ -116,11 +150,17 @@ public partial class Agent : CharacterBody3D
 
         ComputeNeighbors();
         
-        ComputePreferredVelocity();
-        ComputeAccelerationAndVelocity(delta);
+        if (World.Instance.StartNav)
+            ComputePreferredVelocityWithNav();
+        else
+            ComputePreferredVelocity();
+        
+        ComputeAcceleration(delta);
+        UpdateVelocityAndPosition(delta);
         
         PlayAnimation();
-
+        
+        // GD.Print(Name+" move to "+Goal);
     }
     
     private void GetInput()
@@ -148,7 +188,7 @@ public partial class Agent : CharacterBody3D
                     // GD.Print(_shapeCast.GetCollisionNormal(i));
                     float normalAngle = Vector3.Up.AngleTo(_shapeCast.GetCollisionNormal(i)) * 180f / Mathf.Pi;
                     // GD.Print(normalAngle);
-                    if (normalAngle>45)
+                    if (normalAngle>45)  // 若碰撞点处法线与垂直线夹角大于45°，则视为不可经过的障碍物。
                     {
                         _neighborObstacleNearestPoints.Add(_shapeCast.GetCollisionPoint(i));
                     }
@@ -173,29 +213,52 @@ public partial class Agent : CharacterBody3D
     {
         return (Goal - Position).LengthSquared() < 1f;
     }
-
+    
+    /// <summary>
+    /// 计算理想速度 （大小与方向，无导航）
+    /// </summary>
     private void ComputePreferredVelocity()
     {
         if (HasReachedGoal())
         {
             PreferredVelocity = Vector3.Zero;
         }
-        PreferredVelocity = (Goal - Position).Normalized() * PreferredSpeed;
+        else
+        {
+            PreferredVelocity = (Goal - Position).Normalized() * PreferredSpeed;
+        }
     }
 
     /// <summary>
-    /// 根据cost函数，计算加速度与速度。
+    /// 根据导航计算理想速度（大小与方向）
+    /// </summary>
+    private void ComputePreferredVelocityWithNav()
+    {
+        if (_navigationAgent.IsNavigationFinished())
+        {
+            PreferredVelocity = Vector3.Zero;
+        }
+        else
+        {
+            _localGoal = _navigationAgent.GetNextPathPosition();
+            PreferredVelocity = (_localGoal - Position).Normalized() * PreferredSpeed;
+        }
+        
+    }
+
+    /// <summary>
+    /// 根据cost函数，计算加速度。
     /// </summary>
     /// <param name="delta">每帧时间间隔</param>
-    private void ComputeAccelerationAndVelocity(double delta)
+    private void ComputeAcceleration(double delta)
     {
-        Vector3 acceleration = Vector3.Zero;
+        _acceleration = Vector3.Zero;
         
         if (OptMethod == PolicyType.GRADIENT)
         {
             foreach (var costFunction in _costFunctions)
             {        
-                acceleration += costFunction.CalculateCostGradient(Velocity);        
+                _acceleration += costFunction.CalculateCostGradient(Velocity);        
             }
         }
         else
@@ -203,18 +266,29 @@ public partial class Agent : CharacterBody3D
 
         }
 
-        if (acceleration.LengthSquared()>25)
+        if (_acceleration.LengthSquared()>25)
         {
-            acceleration = acceleration.Normalized() * 5;
+            _acceleration = _acceleration.Normalized() * 5;
         }
         // GD.Print("a: "+acceleration);
         
-        Velocity += acceleration * (float)delta;
+        
+    }
+
+    /// <summary>
+    /// 根据加速度，更新速度与位置。
+    /// </summary>
+    /// <param name="delta">每帧时间间隔</param>
+    public void UpdateVelocityAndPosition(double delta)
+    {
+        Velocity += _acceleration * (float)delta;
         
         if (Velocity.LengthSquared()>MaxSpeed*MaxSpeed)
         {
             Velocity = Velocity.Normalized() * MaxSpeed;
         }
+
+        MoveAndSlide();
     }
 
     /// <summary>
@@ -271,7 +345,7 @@ public partial class Agent : CharacterBody3D
     }
 
     /// <summary>
-    /// 更新该Agent的标签这的文本信息
+    /// 更新该Agent的标签的文本信息
     /// </summary>
     private void UpdateAgentLabels()
     {

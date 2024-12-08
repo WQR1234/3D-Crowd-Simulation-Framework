@@ -1,7 +1,5 @@
-[gd_scene load_steps=9 format=3 uid="uid://cb4o2mjfdlaeh"]
+[gd_scene load_steps=7 format=3 uid="uid://cb4o2mjfdlaeh"]
 
-[ext_resource type="PackedScene" uid="uid://4c7wjocl4mx6" path="res://Scenes/agent.tscn" id="1_2570i"]
-[ext_resource type="PackedScene" uid="uid://bau7307l4pu64" path="res://Scenes/obstacle.tscn" id="2_5w60u"]
 [ext_resource type="Script" path="res://Scripts/CameraController.cs" id="3_5effp"]
 [ext_resource type="PackedScene" uid="uid://dm4tmxv4skfle" path="res://Scenes/hill.tscn" id="4_tfyhj"]
 [ext_resource type="Script" path="res://Scripts/UserInterface.cs" id="5_3s31g"]
@@ -20,44 +18,41 @@ points = PackedVector3Array(-1, 0, -1, -1, 0, 1, 1, 0, -1, 1, 0, 1)
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0.93916, 0.343479, 0, -0.343479, 0.93916, 0, 0, 0)
 
-[node name="Agent" parent="." instance=ExtResource("1_2570i")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -5)
-Goal = Vector3(0, 0, 5)
-PreferredSpeed = 1.3
-
-[node name="Agent2" parent="." instance=ExtResource("1_2570i")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0, 0)
-visible = false
-Goal = Vector3(-5, 0, 0)
-PreferredSpeed = 1.3
-
 [node name="Camera3D" type="Camera3D" parent="."]
 process_mode = 3
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.28833, 4.48772)
 script = ExtResource("3_5effp")
 
-[node name="UserInterface" type="Control" parent="."]
+[node name="UserInterface" type="VBoxContainer" parent="."]
 process_mode = 3
-layout_mode = 3
-anchors_preset = 0
-offset_right = 325.0
-offset_bottom = 127.0
+offset_right = 106.0
+offset_bottom = 273.0
 script = ExtResource("5_3s31g")
 
 [node name="PauseButton" type="Button" parent="UserInterface"]
-layout_mode = 0
-offset_right = 102.0
-offset_bottom = 50.0
+layout_mode = 2
 text = "暂停"
+
+[node name="ResetButton" type="Button" parent="UserInterface"]
+layout_mode = 2
+text = "重置
+"
+
+[node name="LoadButton" type="Button" parent="UserInterface"]
+layout_mode = 2
+text = "加载场景"
+
+[node name="FileDialog" type="FileDialog" parent="UserInterface"]
+title = "Open a File"
+initial_position = 2
+size = Vector2i(375, 250)
+ok_button_text = "打开"
+dialog_hide_on_ok = true
+file_mode = 0
+root_subfolder = "examples"
 
 [node name="NavigationRegion3D" type="NavigationRegion3D" parent="."]
 navigation_mesh = SubResource("NavigationMesh_trviw")
-
-[node name="Obstacle" parent="NavigationRegion3D" instance=ExtResource("2_5w60u")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 1, -8)
-
-[node name="Obstacle2" parent="NavigationRegion3D" instance=ExtResource("2_5w60u")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 1, -8)
 
 [node name="Ground" type="StaticBody3D" parent="NavigationRegion3D"]
 transform = Transform3D(20, 0, 0, 0, 20, 0, 0, 0, 20, 0, 0, 0)
@@ -71,6 +66,8 @@ mesh = SubResource("PlaneMesh_tl5cr")
 shape = SubResource("ConvexPolygonShape3D_c141p")
 
 [node name="Hill" parent="NavigationRegion3D" instance=ExtResource("4_tfyhj")]
-transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 0, 0.25, 1)
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 0, 0.25, 1.5)
 
 [connection signal="pressed" from="UserInterface/PauseButton" to="UserInterface" method="OnPauseButtonPressed"]
+[connection signal="pressed" from="UserInterface/LoadButton" to="UserInterface" method="OnLoadButtonPressed"]
+[connection signal="file_selected" from="UserInterface/FileDialog" to="UserInterface" method="OnFileDialogFileSelected"]

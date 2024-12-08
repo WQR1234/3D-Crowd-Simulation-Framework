@@ -111,6 +111,8 @@ text = "位置："
 layout_mode = 2
 text = "速度："
 
+[node name="NavigationAgent3D" type="NavigationAgent3D" parent="."]
+
 [connection signal="input_event" from="." to="." method="OnInputEvent"]
 
 [editable path="Model"]

@@ -47,7 +47,7 @@ public abstract class CostFunction
     
     public float Range { get; protected set; } = 5f;   // 该成本函数所影响范围
 
-    private SamplingParameters _samplingParams;
+    protected SamplingParameters _samplingParams;
 
     public CostFunction(Agent agent, float weight)
     {
@@ -64,6 +64,12 @@ public abstract class CostFunction
     {
         throw new NotImplementedException("Calculate Cost Gradient Method Not Implemented!");
     }
+    
+    /// <summary>
+    /// 解析cost function的自定义参数， 应由该cost function实现。
+    /// </summary>
+    /// <param name="costFunctionData">json数据中的每1条cost function数据</param>
+    public virtual void ParseParam(Godot.Collections.Dictionary costFunctionData) {}
 
     protected static float ComputeTimeToCollision(Vector3 position1, Vector3 velocity1, float radius1,
         Vector3 position2, Vector3 velocity2, float radius2)
@@ -134,7 +140,7 @@ public abstract class CostFunction
         }
     }
 
-    protected float ComputeTimeToFirstCollision(bool ignoreCurrentCollisions)
+    protected float ComputeTimeToFirstCollision(Vector3 velocity, bool ignoreCurrentCollisions)
     {
         float minTTC = Mathf.Inf;
         float maxDistSquared = Range * Range;
@@ -145,7 +151,7 @@ public abstract class CostFunction
             if ((neighborAgent.Position - _agent.Position).LengthSquared() > maxDistSquared)
                 continue;
 
-            float ttc = ComputeTimeToCollision(_agent.Position, _agent.Velocity, 0.5f, neighborAgent.Position, neighborAgent.Velocity, 0.5f);
+            float ttc = ComputeTimeToCollision(_agent.Position, velocity, 0.5f, neighborAgent.Position, neighborAgent.Velocity, 0.5f);
 		
             // ignore current collisions?
             if (ignoreCurrentCollisions && ttc == 0)
