@@ -6,4 +6,7 @@
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <RootNamespace>Umansgd</RootNamespace>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="OsmSharp" Version="7.0.0-pre022" />
+  </ItemGroup>
 </Project>

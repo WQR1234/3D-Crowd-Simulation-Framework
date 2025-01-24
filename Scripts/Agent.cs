@@ -78,6 +78,7 @@ public partial class Agent : CharacterBody3D
         _shapeCast = GetNode<ShapeCast3D>("ShapeCast3D");
         _modelNode = GetNode<Node3D>("Model");
         ((SphereShape3D)_shapeCast.Shape).Radius = 2;
+        _shapeCast.CollisionMask = OptMethod == PolicyType.GRADIENT ? 3U : 1U;
 
         _animation = GetNode<AnimationPlayer>("Model/RootNode/AnimationPlayer");
 
