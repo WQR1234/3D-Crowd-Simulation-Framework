@@ -5,34 +5,25 @@ using System;
 
 public struct SamplingParameters
 {
-    public enum Type
-    {
-        REGULAR,
-		RANDOM        
-    }
+    public enum Type { Regular, Random }
 
-    public enum Base
-	{
-		ZERO, CURRENT_VELOCITY
-	}
+    public enum Base { Zero, CurrentVelocity }
 
-    public enum BaseDirection { UNIT, CURRENT_VELOCITY, PREFERRED_VELOCITY }
+    public enum BaseDirection { Unit, CurrentVelocity, PreferredVelocity }
 
-    public enum Radius { PREFERRED_SPEED, MAXIMUM_SPEED, MAXIMUM_ACCELERATION }
+    public enum Radius { PreferredSpeed, MaximumSpeed, MaximumAcceleration }
 
-    public Type type = Type.REGULAR;
-	public Base @base = Base.ZERO;
-	public BaseDirection baseDirection = BaseDirection.CURRENT_VELOCITY;
-	public Radius radius = Radius.PREFERRED_SPEED;
+    public Type type = Type.Regular;
+	public Base @base = Base.Zero;
+	public BaseDirection baseDirection = BaseDirection.CurrentVelocity;
+	public Radius radius = Radius.PreferredSpeed;
 	public float angle = 180;
 	public int speedSamples = 4;
 	public int angleSamples = 11;
 	public int randomSamples = 100;
 	public bool includeBaseAsSample = false;
 
-    public SamplingParameters()
-    {
-    }
+    public SamplingParameters() { }
 
 }
 
@@ -183,29 +174,29 @@ public abstract class CostFunction
     public Vector3 ApproximateGlobalMinimumBySampling(double delta)
     {
         Vector3 baseV = Vector3.Zero;
-        if (_samplingParams.@base==SamplingParameters.Base.CURRENT_VELOCITY) 
+        if (_samplingParams.@base==SamplingParameters.Base.CurrentVelocity) 
             baseV = _agent.Velocity;
 
         float radius;
-        if (_samplingParams.radius==SamplingParameters.Radius.PREFERRED_SPEED)
+        if (_samplingParams.radius==SamplingParameters.Radius.PreferredSpeed)
             radius = _agent.PreferredSpeed;
-        else if (_samplingParams.radius==SamplingParameters.Radius.MAXIMUM_SPEED)
+        else if (_samplingParams.radius==SamplingParameters.Radius.MaximumSpeed)
             radius = _agent.MaxSpeed;
         else
             radius = Mathf.Min(_agent.MaxSpeed, _agent.MaxAcceleration * (float)delta);
         
         // compute the base direction (a unit vector)
         Vector3 baseDirection = Vector3.Right;
-        if (_samplingParams.baseDirection==SamplingParameters.BaseDirection.UNIT) baseDirection = Vector3.Right;
-        else if (_samplingParams.baseDirection==SamplingParameters.BaseDirection.CURRENT_VELOCITY) baseDirection = _agent.Velocity.Normalized();
-        else if (_samplingParams.baseDirection == SamplingParameters.BaseDirection.PREFERRED_VELOCITY) baseDirection = _agent.PreferredVelocity.Normalized();
+        if (_samplingParams.baseDirection==SamplingParameters.BaseDirection.Unit) baseDirection = Vector3.Right;
+        else if (_samplingParams.baseDirection==SamplingParameters.BaseDirection.CurrentVelocity) baseDirection = _agent.Velocity.Normalized();
+        else if (_samplingParams.baseDirection == SamplingParameters.BaseDirection.PreferredVelocity) baseDirection = _agent.PreferredVelocity.Normalized();
 
         float maxAngle = _samplingParams.angle / 360.0f * Mathf.Pi; 
 
         Vector3 bestVelocity = Vector3.Zero;
         float bestCost = Mathf.Inf;
 
-        if (_samplingParams.type==SamplingParameters.Type.RANDOM) 
+        if (_samplingParams.type==SamplingParameters.Type.Random) 
         {
             for (int i = 0; i < _samplingParams.randomSamples; i++)
             {
@@ -231,7 +222,7 @@ public abstract class CostFunction
         }
 
         // --- Option 2: Regular sampling
-        else if (_samplingParams.type==SamplingParameters.Type.REGULAR)
+        else if (_samplingParams.type==SamplingParameters.Type.Regular)
         {
             // compute the difference in angle and length per iteration
             float startAngle = -maxAngle;

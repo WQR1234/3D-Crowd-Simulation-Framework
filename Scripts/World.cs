@@ -46,18 +46,19 @@ public partial class World : Node
 		}
 	}
 
-	public void CreatAgent(Vector3 position, Vector3 goal, float preferredSpeed, float maxSpeed)
+	public void CreatAgent(Vector3 position, Vector3 goal, float preferredSpeed, float maxSpeed, Agent.PolicyType method)
 	{
 		var agentInstance = _agentScene.Instantiate() as Agent;
 		if (agentInstance == null)
 		{
-			GD.Print("creat agent fail!");
+			GD.PrintErr("creat agent fail!");
 			return;
 		}
 		agentInstance.Position = position;
 		agentInstance.Goal = goal;
 		agentInstance.PreferredSpeed = preferredSpeed;
 		agentInstance.MaxSpeed = maxSpeed;
+		agentInstance.OptMethod = method;
 		agentInstance.Name = "agent" + AllAgents.Count;
 		
 		AddChild(agentInstance);

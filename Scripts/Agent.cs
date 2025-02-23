@@ -66,19 +66,19 @@ public partial class Agent : CharacterBody3D
 
     public enum PolicyType
     {
-        GRADIENT, SAMPLING,
+        Gradient, Sampling,
     }
     /// <summary>
     /// 成本函数的求解方式
     /// </summary>
-    public PolicyType OptMethod { get; protected set; } = PolicyType.GRADIENT;
+    public PolicyType OptMethod { get; set; } = PolicyType.Gradient;
 
     public override void _Ready()
     {
         _shapeCast = GetNode<ShapeCast3D>("ShapeCast3D");
         _modelNode = GetNode<Node3D>("Model");
         ((SphereShape3D)_shapeCast.Shape).Radius = 2;
-        _shapeCast.CollisionMask = OptMethod == PolicyType.GRADIENT ? 3U : 1U;
+        _shapeCast.CollisionMask = OptMethod == PolicyType.Gradient ? 3U : 1U;
 
         _animation = GetNode<AnimationPlayer>("Model/RootNode/AnimationPlayer");
 
@@ -122,6 +122,24 @@ public partial class Agent : CharacterBody3D
         float weight = costFunctionData["weight"].AsSingle();
         object[] costFunctionArgs = { this, weight };
 
+        var costFunctionInstance = Activator.CreateInstance(costFunctionType, costFunctionArgs) as CostFunction;
+        
+        _costFunctions.Add(costFunctionInstance);
+    }
+
+    public void AddCostFunction(UserInterface.CostFunctionData costFunctionData)
+    {
+        string costFunctionName = costFunctionData.Name;
+        costFunctionName = "CostFunctions." + costFunctionName;
+        
+        Type costFunctionType = Type.GetType(costFunctionName);
+        if (costFunctionType==null)
+        {
+            GD.Print($"There is no cost function {costFunctionName}.");
+            return;
+        }
+        
+        object[] costFunctionArgs = { this, costFunctionData.Weight };
         var costFunctionInstance = Activator.CreateInstance(costFunctionType, costFunctionArgs) as CostFunction;
         
         _costFunctions.Add(costFunctionInstance);
@@ -255,7 +273,7 @@ public partial class Agent : CharacterBody3D
     {
         _acceleration = Vector3.Zero;
         
-        if (OptMethod == PolicyType.GRADIENT)
+        if (OptMethod == PolicyType.Gradient)
         {
             foreach (var costFunction in _costFunctions)
             {        
