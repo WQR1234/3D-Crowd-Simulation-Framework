@@ -1,21 +1,25 @@
 using Godot;
 using System;
-
+using System.Text.Json.Serialization;
 
 
 public struct SamplingParameters
 {
     public enum Type { Regular, Random }
-
+    
     public enum Base { Zero, CurrentVelocity }
-
+    
     public enum BaseDirection { Unit, CurrentVelocity, PreferredVelocity }
-
+    
     public enum Radius { PreferredSpeed, MaximumSpeed, MaximumAcceleration }
 
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public Type type = Type.Regular;
+    [JsonConverter(typeof(JsonStringEnumConverter))]
 	public Base @base = Base.Zero;
+    [JsonConverter(typeof(JsonStringEnumConverter))]
 	public BaseDirection baseDirection = BaseDirection.CurrentVelocity;
+    [JsonConverter(typeof(JsonStringEnumConverter))]
 	public Radius radius = Radius.PreferredSpeed;
 	public float angle = 180;
 	public int speedSamples = 4;

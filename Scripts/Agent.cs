@@ -129,6 +129,13 @@ public partial class Agent : CharacterBody3D
 
     public void AddCostFunction(UserInterface.CostFunctionData costFunctionData)
     {
+        // if (costFunctionData.SamplingPara!=null)
+        // {
+        //     var samplingPara = costFunctionData.SamplingPara.Value;
+        //     GD.Print(samplingPara.@base);
+        //     GD.Print(samplingPara.radius);
+        //     GD.Print(samplingPara.speedSamples);
+        // }
         string costFunctionName = costFunctionData.Name;
         costFunctionName = "CostFunctions." + costFunctionName;
         
@@ -141,7 +148,7 @@ public partial class Agent : CharacterBody3D
         
         object[] costFunctionArgs = { this, costFunctionData.Weight };
         var costFunctionInstance = Activator.CreateInstance(costFunctionType, costFunctionArgs) as CostFunction;
-        
+
         _costFunctions.Add(costFunctionInstance);
     }
 
