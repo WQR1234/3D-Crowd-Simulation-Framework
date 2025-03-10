@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://cb4o2mjfdlaeh"]
+[gd_scene load_steps=9 format=3 uid="uid://cb4o2mjfdlaeh"]
 
 [ext_resource type="Script" path="res://Scripts/CameraController.cs" id="3_5effp"]
 [ext_resource type="PackedScene" uid="uid://dm4tmxv4skfle" path="res://Scenes/hill.tscn" id="4_tfyhj"]
@@ -12,6 +12,12 @@ agent_max_climb = 0.1
 
 [sub_resource type="ConvexPolygonShape3D" id="ConvexPolygonShape3D_c141p"]
 points = PackedVector3Array(-1, 0, -1, -1, 0, 1, 1, 0, -1, 1, 0, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_0ljyb"]
+size = Vector3(2, 1, 1)
+
+[sub_resource type="ConvexPolygonShape3D" id="ConvexPolygonShape3D_clnqo"]
+points = PackedVector3Array(1, 0.5, 0.5, 1, 0.5, -0.5, -1, 0.5, 0.5, 1, -0.5, 0.5, 1, -0.5, -0.5, -1, 0.5, -0.5, -1, -0.5, 0.5, -1, -0.5, -0.5)
 
 [node name="Main" type="Node"]
 
@@ -66,8 +72,19 @@ mesh = SubResource("PlaneMesh_tl5cr")
 shape = SubResource("ConvexPolygonShape3D_c141p")
 
 [node name="Hill" parent="NavigationRegion3D" instance=ExtResource("4_tfyhj")]
-transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 0, 0.25, 1.5)
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -5.04826, 0.25, 4.52901)
+
+[node name="StaticBody3D" type="StaticBody3D" parent="NavigationRegion3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+collision_layer = 2
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="NavigationRegion3D/StaticBody3D"]
+mesh = SubResource("BoxMesh_0ljyb")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="NavigationRegion3D/StaticBody3D"]
+shape = SubResource("ConvexPolygonShape3D_clnqo")
 
 [connection signal="pressed" from="UserInterface/PauseButton" to="UserInterface" method="OnPauseButtonPressed"]
+[connection signal="pressed" from="UserInterface/ResetButton" to="UserInterface" method="OnResetButtonPressed"]
 [connection signal="pressed" from="UserInterface/LoadButton" to="UserInterface" method="OnLoadButtonPressed"]
 [connection signal="file_selected" from="UserInterface/FileDialog" to="UserInterface" method="OnFileDialogFileSelected"]

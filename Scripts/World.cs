@@ -95,6 +95,5 @@ public partial class World : Node
 		}
 
 		StartNav = startNav;
-
 	}
 }

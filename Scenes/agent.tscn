@@ -113,6 +113,10 @@ text = "速度："
 
 [node name="NavigationAgent3D" type="NavigationAgent3D" parent="."]
 
+[node name="TrackTimer" type="Timer" parent="."]
+wait_time = 0.1
+
 [connection signal="input_event" from="." to="." method="OnInputEvent"]
+[connection signal="timeout" from="TrackTimer" to="." method="OnTrackTimerTimeOut"]
 
 [editable path="Model"]

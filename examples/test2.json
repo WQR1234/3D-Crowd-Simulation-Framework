@@ -21,7 +21,8 @@
 		],
 		"Hills": [
 			{"Pos": [0, 1.5], "Rot": 90}
-		]
+		],
+		"OsmPath": "OsmFiles/map.osm"
 	},
 	"CostFunctions": [
 		{

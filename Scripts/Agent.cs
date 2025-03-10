@@ -54,7 +54,7 @@ public partial class Agent : CharacterBody3D
     private Label _velLabel;
 
     private NavigationAgent3D _navigationAgent;
-    private Vector3 _localGoal;  // 局部（临时）目标点
+    private Vector3? _localGoal;  // 局部（临时）目标点
 
     private List<Agent> _neighborAgents;
     public IReadOnlyList<Agent> NeighborAgents => _neighborAgents.AsReadOnly();
@@ -63,6 +63,9 @@ public partial class Agent : CharacterBody3D
 
     private List<CostFunction> _costFunctions;
     public IReadOnlyList<CostFunction> CostFunctions => _costFunctions.AsReadOnly();
+
+    private Timer _trackTimer;
+    private List<Vector3> _trackPoints;
 
     public enum PolicyType
     {
@@ -92,6 +95,9 @@ public partial class Agent : CharacterBody3D
         _neighborAgents = new List<Agent>();
         _neighborObstacleNearestPoints = new List<Vector3>();
         _costFunctions = new List<CostFunction>();
+
+        _trackTimer = GetNode<Timer>("TrackTimer");
+        _trackPoints = new();
         
         // TODO: 添加该agent的cost functions
         //_costFunctions.Add(new GoalReachingForce(this, 1));
@@ -100,6 +106,9 @@ public partial class Agent : CharacterBody3D
         
         World.Instance.AllAgents.Add(this);
         
+        _trackTimer.Start();
+
+
         GD.Print("agent: "+this.Name+" ready");
     }
 
@@ -176,9 +185,9 @@ public partial class Agent : CharacterBody3D
 
         ComputeNeighbors();
         
-        if (World.Instance.StartNav)
+        if (World.Instance.StartNav) 
             ComputePreferredVelocityWithNav();
-        else
+        else 
             ComputePreferredVelocity();
         
         ComputeAcceleration(delta);
@@ -186,6 +195,8 @@ public partial class Agent : CharacterBody3D
         
         PlayAnimation();
         
+        ShowTrackAndTarget();
+
         // GD.Print(Name+" move to "+Goal);
     }
     
@@ -232,12 +243,17 @@ public partial class Agent : CharacterBody3D
     }
 
     /// <summary>
-    /// 判断是否已到达目标点。若当前位置与目标点距离小于1，则视为已到达目标。
+    /// 判断是否已到达目标点。若当前位置与目标点距离小于0.5，则视为已到达目标。
     /// </summary>
     /// <returns>bool值，是否到达目标点</returns>
     private bool HasReachedGoal()
     {
-        return (Goal - Position).LengthSquared() < 1f;
+        return (Goal - Position).LengthSquared() < 0.25f;
+    }
+
+    private bool HasReachedGoal(Vector3 localGoal)
+    {
+        return (localGoal - Position).LengthSquared() < 0.25f;
     }
     
     /// <summary>
@@ -260,14 +276,30 @@ public partial class Agent : CharacterBody3D
     /// </summary>
     private void ComputePreferredVelocityWithNav()
     {
-        if (_navigationAgent.IsNavigationFinished())
+        if (HasReachedGoal())
         {
             PreferredVelocity = Vector3.Zero;
         }
         else
         {
-            _localGoal = _navigationAgent.GetNextPathPosition();
-            PreferredVelocity = (_localGoal - Position).Normalized() * PreferredSpeed;
+            // GD.Print(_localGoal);
+            if (!_localGoal.HasValue)
+            {
+                _localGoal = _navigationAgent.GetNextPathPosition();
+                GD.Print("_LOCAL: "+_localGoal);
+                return;
+            }
+            
+            if (HasReachedGoal(_localGoal.Value))
+            {
+                _localGoal = _navigationAgent.GetNextPathPosition();
+                GD.Print("AFTER: "+_localGoal);
+            }
+            // else
+            // {
+            //     GD.Print("not arrive loacl");
+            // }
+            PreferredVelocity = (_localGoal.Value - Position).Normalized() * PreferredSpeed;
         }
         
     }
@@ -377,5 +409,30 @@ public partial class Agent : CharacterBody3D
     {
         _posLabel.Text = "位置： "+Position.ToString("0.00");
         _velLabel.Text = "速度： "+Velocity.ToString("0.00");
+    }
+    
+    private void OnTrackTimerTimeOut()
+    {
+        if (Velocity.LengthSquared()<=0.025f) return;
+        if (_trackPoints.Count>0 && _trackPoints[^1].DistanceSquaredTo(Position)<0.025f) return;
+
+        _trackPoints.Add(Position);
+        
+    }
+
+    /// <summary>
+    /// 显示轨迹与目标点
+    /// </summary>
+    private void ShowTrackAndTarget()
+    {
+        DebugDraw3D.DrawPoints(_trackPoints.ToArray(), DebugDraw3D.PointType.TypeSphere, 0.05f, new Color(1, 1, 0));  // yellow
+        DebugDraw3D.DrawSphere(Goal, 0.05f, new Color(0, 1, 0));   // green
+    }
+
+    public void Reset()
+    {
+        _localGoal = null;
+        _trackPoints.Clear();
+        _navigationAgent.TargetPosition = Goal; // 重置目标点，以重新生成导航路径
     }
 }

@@ -15,6 +15,7 @@ public partial class UserInterface : VBoxContainer
 	
     private Button _pauseButton; 
     private FileDialog _fileDialog;
+    private ConfigData _configData;
 
     public override void _Ready()
     { 
@@ -42,6 +43,22 @@ public partial class UserInterface : VBoxContainer
     private void OnLoadButtonPressed()
     { 
 	    _fileDialog.Popup();
+    }
+
+    private void OnResetButtonPressed()
+    {
+	    foreach (var (agent, agentData) in World.Instance.AllAgents.Zip(_configData.Agents, (agent, data) => (agent, data)))
+	    {
+		    var posV = new Vector3(agentData.Pos[0], 0, agentData.Pos[1]);
+		    agent.Position = posV;
+		    agent.Reset();
+	    }
+
+	    // if (!World.IsPause)
+	    // {
+		   //  OnPauseButtonPressed();
+	    // }
+	    
     }
 
     public class ConfigData
@@ -100,8 +117,8 @@ public partial class UserInterface : VBoxContainer
 	    using var file = Godot.FileAccess.Open(path, Godot.FileAccess.ModeFlags.Read);
 	    string content = file.GetAsText();
 	    
-	    var data = JsonSerializer.Deserialize<ConfigData>(content);
-	    if (data==null)
+	    _configData = JsonSerializer.Deserialize<ConfigData>(content);
+	    if (_configData==null)
 	    {
 		    GD.PrintErr("Parse Fail!");
 		    return;
@@ -109,7 +126,7 @@ public partial class UserInterface : VBoxContainer
 
 	    
 	    // create agents
-	    foreach (var agentData in data.Agents)
+	    foreach (var agentData in _configData.Agents)
 	    {
 		    var posV = new Vector3(agentData.Pos[0], 0, agentData.Pos[1]);
 		    var goalV = new Vector3(agentData.Goal[0], 0, agentData.Goal[1]);
@@ -118,25 +135,27 @@ public partial class UserInterface : VBoxContainer
 	    }
 	    
 	    // create obstacles 
-	    foreach (var (i, wallData) in data.Obstacles.Walls.Select((wallData, i) => (i, wallData)))
+	    foreach (var (i, wallData) in _configData.Obstacles.Walls.Select((wallData, i) => (i, wallData)))
 	    {
-		    var posV = new Vector3(wallData.Pos[0], 0, wallData.Pos[1]);
+		    var posV = new Vector3(wallData.Pos[0], 1, wallData.Pos[1]);
 		    var sizeV = new Vector3(wallData.Size[0], 1, wallData.Size[1]);
 		    
 		    World.Instance.CreatWall(posV, sizeV, i);
 	    }
 	    
 	    // add nav
-	    World.Instance.BakeNavMesh(data.StartNav);
+	    World.Instance.BakeNavMesh(_configData.StartNav);
 	    
 	    // add cost functions
 	    foreach (var agent in World.Instance.AllAgents)
 	    {
-		    foreach (var costFunctionData in data.CostFunctions)
+		    foreach (var costFunctionData in _configData.CostFunctions)
 		    {
 			    agent.AddCostFunction(costFunctionData);
 		    }
 	    }
+	    
+	    OnPauseButtonPressed();
 	    
     }
 }
