@@ -74,10 +74,10 @@ public partial class UserInterface : VBoxContainer
     
     public class AgentData
     {
-	    public List<float> Pos  { get; set; } 
-	    public List<float> Goal  { get; set; } 
-	    public float PrefSpeed { get; set; }
-	    public float MaxSpeed  { get; set; } 
+	    public List<float> Pos  { get; set; }
+	    public List<float> Goal  { get; set; }
+	    public float PrefSpeed { get; set; } = 1.3f;
+	    public float MaxSpeed { get; set; } = 1.6f;
 	    
 	    [JsonConverter(typeof(JsonStringEnumConverter))]
 	    public Agent.PolicyType OptimizationMethod { get; set; }
@@ -106,7 +106,6 @@ public partial class UserInterface : VBoxContainer
 	    public string Name { get; set; }
 	    public float Weight { get; set; }
 
-	    // [JsonConverter(typeof(JsonStringEnumConverter))]
 	    public SamplingParameters? SamplingPara { get; set; } = null;
     }
 

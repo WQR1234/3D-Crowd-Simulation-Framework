@@ -32,7 +32,7 @@ public class RVO : CostFunction
         string samlingTypeStr = costFunctionData["SamplingType"].AsString();
         if (Enum.TryParse(samlingTypeStr, true, out SamplingParameters.Type samType))
         {
-            _samplingParams.type = samType;
+            samplingParams.type = samType;
         }
         else
         {

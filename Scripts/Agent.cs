@@ -10,24 +10,22 @@ public partial class Agent : CharacterBody3D
 
     [Export]
     public float MaxSpeed { get; set; } = 1.6f;
-    
-    [Export]
-    public Vector3 Goal { get; set; }
-    
+
+    [Export] public Vector3 Goal { get; set; } 
     /// <summary>Returns the agent's preferred walking speed.</summary>
     [Export]
-    public float PreferredSpeed { get; set; }  
+    public float PreferredSpeed { get; set; } = 1.3f;
+
 
     public float MaxAcceleration { get; set; } = 5;
+
+    public float Range { get; set; } = 5;
     
     
     /// <summary>Returns the agent's last computed preferred velocity.</summary>
     public Vector3 PreferredVelocity { get; private set; }    
     
     /// <summary>Sets this Policy's relaxation time to the given value.</summary>
-    /// <param name="t">The desired new relaxation time. 
-    /// Use 0 or less to let agents use their new velocity immediately.
-    /// Use a higher value to let agents interpolate between their current and new velocity.</param>
     /// <summary> Returns the relaxation time of this Policy.</summary>
     public float RelaxationTime { get; private set; } = 0.5f;   
 
@@ -67,6 +65,11 @@ public partial class Agent : CharacterBody3D
     private Timer _trackTimer;
     private List<Vector3> _trackPoints;
 
+    private List<Vector3> _localGoals;
+
+    private List<Vector3> _velocityHistory;
+    private bool _hasOutputCSV = false;
+
     public enum PolicyType
     {
         Gradient, Sampling,
@@ -80,7 +83,7 @@ public partial class Agent : CharacterBody3D
     {
         _shapeCast = GetNode<ShapeCast3D>("ShapeCast3D");
         _modelNode = GetNode<Node3D>("Model");
-        ((SphereShape3D)_shapeCast.Shape).Radius = 2;
+        ((SphereShape3D)_shapeCast.Shape).Radius = 5;
         _shapeCast.CollisionMask = OptMethod == PolicyType.Gradient ? 3U : 1U;
 
         _animation = GetNode<AnimationPlayer>("Model/RootNode/AnimationPlayer");
@@ -98,10 +101,13 @@ public partial class Agent : CharacterBody3D
 
         _trackTimer = GetNode<Timer>("TrackTimer");
         _trackPoints = new();
+
+        _localGoals = new();
+        _velocityHistory = new();
         
         // TODO: 添加该agent的cost functions
-        //_costFunctions.Add(new GoalReachingForce(this, 1));
-        //_costFunctions.Add(new SocialForcesAvoidance(this, 1));
+        // _costFunctions.Add(new GoalReachingForce(this, 1));
+        // _costFunctions.Add(new SocialForcesAvoidance(this, 1));
         
         
         World.Instance.AllAgents.Add(this);
@@ -144,6 +150,7 @@ public partial class Agent : CharacterBody3D
         //     GD.Print(samplingPara.@base);
         //     GD.Print(samplingPara.radius);
         //     GD.Print(samplingPara.speedSamples);
+        //     GD.Print(samplingPara.randomSamples);
         // }
         string costFunctionName = costFunctionData.Name;
         costFunctionName = "CostFunctions." + costFunctionName;
@@ -157,26 +164,36 @@ public partial class Agent : CharacterBody3D
         
         object[] costFunctionArgs = { this, costFunctionData.Weight };
         var costFunctionInstance = Activator.CreateInstance(costFunctionType, costFunctionArgs) as CostFunction;
+        if (costFunctionInstance!=null && costFunctionData.SamplingPara.HasValue)
+        {
+            costFunctionInstance.samplingParams = costFunctionData.SamplingPara.Value;
+        }
 
         _costFunctions.Add(costFunctionInstance);
     }
 
     public override void _PhysicsProcess(double delta)
     {
-        if (Name=="Agent2")
-        {
-            return;
-        }
+        // if (Name=="Agent2")
+        // {
+        //     return;
+        // }
 
         // GetInput();
         
         // GD.Print(this.Name+" process");
+        
+        ShowTrackAndTarget();
+        
+        // EmitRays(out _, out _, true);
 
         if (World.IsPause) 
         {
             _animation.Stop();
             return;
         }
+        
+        _velocityHistory.Add(Velocity);
 
         if (_isShowLabels)
         {
@@ -191,11 +208,15 @@ public partial class Agent : CharacterBody3D
             ComputePreferredVelocity();
         
         ComputeAcceleration(delta);
-        UpdateVelocityAndPosition(delta);
+        // UpdateVelocityAndPosition(delta);  // 在World中执行
         
         PlayAnimation();
-        
-        ShowTrackAndTarget();
+
+        if (!_hasOutputCSV && HasReachedGoal())
+        {
+            _hasOutputCSV = true;
+            WriteVelocityToCSV();
+        }
 
         // GD.Print(Name+" move to "+Goal);
     }
@@ -210,14 +231,17 @@ public partial class Agent : CharacterBody3D
     {
         _neighborAgents.Clear();
         _neighborObstacleNearestPoints.Clear();
+        
+        // GD.Print(_shapeCast.GetCollisionCount());
         if (_shapeCast.IsColliding())
         {
+            
             for (int i = 0; i < _shapeCast.GetCollisionCount(); i++)
             {
                 if (_shapeCast.GetCollider(i) is Agent otherAgent)
                 {
                     _neighborAgents.Add(otherAgent);
-                    // GD.Print(otherAgent.Name);
+                    // GD.Print(Name+": "+otherAgent.Name);
                 }
                 
                 else if (_shapeCast.GetCollider(i) is StaticBody3D obstacle)
@@ -276,7 +300,7 @@ public partial class Agent : CharacterBody3D
     /// </summary>
     private void ComputePreferredVelocityWithNav()
     {
-        if (HasReachedGoal())
+        if (_navigationAgent.IsNavigationFinished())
         {
             PreferredVelocity = Vector3.Zero;
         }
@@ -286,14 +310,18 @@ public partial class Agent : CharacterBody3D
             if (!_localGoal.HasValue)
             {
                 _localGoal = _navigationAgent.GetNextPathPosition();
-                GD.Print("_LOCAL: "+_localGoal);
+                GD.Print("LOCAL POINT: "+_localGoal);
+                _localGoals.Add(_localGoal.Value);
+                
                 return;
             }
             
             if (HasReachedGoal(_localGoal.Value))
             {
                 _localGoal = _navigationAgent.GetNextPathPosition();
-                GD.Print("AFTER: "+_localGoal);
+                GD.Print("NEW LOCAL POINT: "+_localGoal);
+                _localGoals.Add(_localGoal.Value);
+
             }
             // else
             // {
@@ -321,7 +349,9 @@ public partial class Agent : CharacterBody3D
         }
         else
         {
-
+            Vector3 bestVelocity = _costFunctions[0].ApproximateGlobalMinimumBySampling(delta);
+            
+            _acceleration = (bestVelocity - Velocity) / (float)delta;
         }
 
         if (_acceleration.LengthSquared()>25)
@@ -346,7 +376,13 @@ public partial class Agent : CharacterBody3D
             Velocity = Velocity.Normalized() * MaxSpeed;
         }
 
-        MoveAndSlide();
+        // MoveAndSlide();
+        
+        var collision = MoveAndCollide(Velocity * (float)delta);
+        if (collision!=null)
+        {
+            Velocity -= 5f*(float)delta*Velocity.Project(collision.GetNormal());
+        }
     }
 
     /// <summary>
@@ -356,7 +392,8 @@ public partial class Agent : CharacterBody3D
     {
         // GD.Print("v: "+Velocity);
 
-        if (Velocity.LengthSquared()>=0.025f)
+        if (Velocity.LengthSquared()>=0.025f &&
+            (_trackPoints.Count == 0 || Position.DistanceSquaredTo(_trackPoints[^1]) >= 0.0001f))
         {
             Vector3 target = new Vector3(Velocity.X, 0, Velocity.Z);
             _modelNode.Basis = Basis.LookingAt(target, useModelFront: true);
@@ -425,14 +462,59 @@ public partial class Agent : CharacterBody3D
     /// </summary>
     private void ShowTrackAndTarget()
     {
-        DebugDraw3D.DrawPoints(_trackPoints.ToArray(), DebugDraw3D.PointType.TypeSphere, 0.05f, new Color(1, 1, 0));  // yellow
+        DebugDraw3D.DrawPoints(_trackPoints.ToArray(), DebugDraw3D.PointType.TypeSphere, 0.02f, new Color(1, 1, 0));  // yellow
         DebugDraw3D.DrawSphere(Goal, 0.05f, new Color(0, 1, 0));   // green
+        
+        DebugDraw3D.DrawPoints(_localGoals.ToArray(), DebugDraw3D.PointType.TypeSquare, 0.25f, new Color(1, 0, 0)); // red
     }
 
     public void Reset()
     {
+        Velocity = Vector3.Zero;
         _localGoal = null;
         _trackPoints.Clear();
         _navigationAgent.TargetPosition = Goal; // 重置目标点，以重新生成导航路径
+    }
+
+    public bool EmitRays(out Vector3 intersection, out Vector3 normal, bool showRay=false)
+    {
+        Vector3 origin = Position + Vector3.Up * 0.2f;
+        var spaceState = this.GetWorld3D().DirectSpaceState;
+        var query = PhysicsRayQueryParameters3D.Create(origin, 
+            origin+Velocity.Normalized()*Range, 
+            2);
+        var result = spaceState.IntersectRay(query);
+        if (result.Count>0)
+        {
+            intersection = result["position"].AsVector3();
+            normal = result["normal"].AsVector3();
+
+            if (showRay)
+            {
+                DebugDraw3D.DrawArrow(origin, intersection, new Color(1, 1, 0), 0.05f);
+                DebugDraw3D.DrawArrowRay(intersection, normal, 2, new Color(1, 1, 0), 0.05f);
+            }
+
+            return true;
+        }
+
+        intersection = Vector3.Zero;
+        normal = Vector3.Zero;
+        return false;
+
+    }
+
+    private void WriteVelocityToCSV()
+    {
+        using var csvFile = Godot.FileAccess.Open($"res://output/{Name}.csv", FileAccess.ModeFlags.Write);
+        
+        csvFile.StoreLine("X,Y,Z");
+
+        foreach (var vel in _velocityHistory)
+        {
+            csvFile.StoreLine($"{vel.X},{vel.Y},{vel.Z}");
+        }
+        
+        GD.Print("Data written to CSV successfully.");
     }
 }

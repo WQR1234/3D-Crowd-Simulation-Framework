@@ -12,7 +12,7 @@ namespace CostFunctions
             
             var f = (_agent.PreferredVelocity - velocity) /
                     Mathf.Max(_agent.RelaxationTime, World.Instance.DeltaTime);
-            // GD.Print("GF: "+f);
+            // GD.Print("GF: "+f.Length());
             return f;
         }
     }

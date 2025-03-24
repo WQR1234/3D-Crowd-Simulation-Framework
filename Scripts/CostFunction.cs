@@ -14,18 +14,18 @@ public struct SamplingParameters
     public enum Radius { PreferredSpeed, MaximumSpeed, MaximumAcceleration }
 
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public Type type = Type.Regular;
+    public Type type { get; set; } = Type.Regular;
     [JsonConverter(typeof(JsonStringEnumConverter))]
-	public Base @base = Base.Zero;
+	public Base @base { get; set; } = Base.Zero;
     [JsonConverter(typeof(JsonStringEnumConverter))]
-	public BaseDirection baseDirection = BaseDirection.CurrentVelocity;
+	public BaseDirection baseDirection { get; set; } = BaseDirection.CurrentVelocity;
     [JsonConverter(typeof(JsonStringEnumConverter))]
-	public Radius radius = Radius.PreferredSpeed;
-	public float angle = 180;
-	public int speedSamples = 4;
-	public int angleSamples = 11;
-	public int randomSamples = 100;
-	public bool includeBaseAsSample = false;
+	public Radius radius { get; set; } = Radius.PreferredSpeed;
+	public float angle { get; set; } = 180;
+	public int speedSamples { get; set; } = 4;
+	public int angleSamples { get; set; }= 11;
+    public int randomSamples { get; set; } = 100;
+    public bool includeBaseAsSample { get; set; } = false;
 
     public SamplingParameters() { }
 
@@ -39,10 +39,8 @@ public abstract class CostFunction
     protected Agent _agent;
 
     public float Weight { get; protected set; } = 1;   // 该成本函数所占权重
-    
-    public float Range { get; protected set; } = 5f;   // 该成本函数所影响范围
 
-    protected SamplingParameters _samplingParams;
+    public SamplingParameters samplingParams ;
 
     public CostFunction(Agent agent, float weight)
     {
@@ -138,7 +136,7 @@ public abstract class CostFunction
     protected float ComputeTimeToFirstCollision(Vector3 velocity, bool ignoreCurrentCollisions)
     {
         float minTTC = Mathf.Inf;
-        float maxDistSquared = Range * Range;
+        float maxDistSquared = _agent.Range * _agent.Range;
 
         // check neighboring agents
         foreach (var neighborAgent in _agent.NeighborAgents)
@@ -160,13 +158,9 @@ public abstract class CostFunction
         // ...
         // 发射射线检测将要撞到的障碍物
 
-        var spaceState = _agent.GetWorld3D().DirectSpaceState;
-        var query = PhysicsRayQueryParameters3D.Create(_agent.Position, 
-                                _agent.Position+_agent.Velocity.Normalized()*Range, 
-                                2);
-        var result = spaceState.IntersectRay(query);
-        if (result.Count>0) {
-            float ttc = (result["position"].AsVector3() - _agent.Position).Length() / _agent.Velocity.Length();
+        bool isCollision = _agent.EmitRays(out Vector3 intersection, out _);
+        if (isCollision) {
+            float ttc = (intersection - _agent.Position).Length() / _agent.Velocity.Length();
             if (!ignoreCurrentCollisions || ttc > 0) {
                 minTTC = Mathf.Min(minTTC, ttc);
             }
@@ -177,32 +171,35 @@ public abstract class CostFunction
 
     public Vector3 ApproximateGlobalMinimumBySampling(double delta)
     {
+        GD.Print(samplingParams.type, samplingParams.baseDirection, samplingParams.@base);
+        GD.Print(samplingParams.type==SamplingParameters.Type.Random, samplingParams.randomSamples);
         Vector3 baseV = Vector3.Zero;
-        if (_samplingParams.@base==SamplingParameters.Base.CurrentVelocity) 
+        if (samplingParams.@base==SamplingParameters.Base.CurrentVelocity) 
             baseV = _agent.Velocity;
 
         float radius;
-        if (_samplingParams.radius==SamplingParameters.Radius.PreferredSpeed)
+        if (samplingParams.radius==SamplingParameters.Radius.PreferredSpeed)
             radius = _agent.PreferredSpeed;
-        else if (_samplingParams.radius==SamplingParameters.Radius.MaximumSpeed)
+        else if (samplingParams.radius==SamplingParameters.Radius.MaximumSpeed)
             radius = _agent.MaxSpeed;
         else
             radius = Mathf.Min(_agent.MaxSpeed, _agent.MaxAcceleration * (float)delta);
         
         // compute the base direction (a unit vector)
         Vector3 baseDirection = Vector3.Right;
-        if (_samplingParams.baseDirection==SamplingParameters.BaseDirection.Unit) baseDirection = Vector3.Right;
-        else if (_samplingParams.baseDirection==SamplingParameters.BaseDirection.CurrentVelocity) baseDirection = _agent.Velocity.Normalized();
-        else if (_samplingParams.baseDirection == SamplingParameters.BaseDirection.PreferredVelocity) baseDirection = _agent.PreferredVelocity.Normalized();
+        if (samplingParams.baseDirection==SamplingParameters.BaseDirection.Unit) baseDirection = Vector3.Right;
+        else if (samplingParams.baseDirection==SamplingParameters.BaseDirection.CurrentVelocity) baseDirection = _agent.Velocity.Normalized();
+        else if (samplingParams.baseDirection == SamplingParameters.BaseDirection.PreferredVelocity) baseDirection = _agent.PreferredVelocity.Normalized();
 
-        float maxAngle = _samplingParams.angle / 360.0f * Mathf.Pi; 
+        float maxAngle = samplingParams.angle / 360.0f * Mathf.Pi; 
 
         Vector3 bestVelocity = Vector3.Zero;
         float bestCost = Mathf.Inf;
 
-        if (_samplingParams.type==SamplingParameters.Type.Random) 
+        if (samplingParams.type==SamplingParameters.Type.Random) 
         {
-            for (int i = 0; i < _samplingParams.randomSamples; i++)
+            GD.Print("random!!");
+            for (int i = 0; i < samplingParams.randomSamples; i++)
             {
                 // create a random velocity in the cone/circle
                 float randomAngle = (float)GD.RandRange(-maxAngle, maxAngle);
@@ -226,22 +223,22 @@ public abstract class CostFunction
         }
 
         // --- Option 2: Regular sampling
-        else if (_samplingParams.type==SamplingParameters.Type.Regular)
+        else if (samplingParams.type==SamplingParameters.Type.Regular)
         {
             // compute the difference in angle and length per iteration
             float startAngle = -maxAngle;
             float endAngle = maxAngle;
-            float deltaAngle = (endAngle - startAngle) / (_samplingParams.angle == 360 ? _samplingParams.angleSamples : (_samplingParams.angleSamples - 1));
-            float deltaLength = radius / (_samplingParams.includeBaseAsSample ? (_samplingParams.speedSamples - 1) : _samplingParams.speedSamples);
+            float deltaAngle = (endAngle - startAngle) / (samplingParams.angle == 360 ? samplingParams.angleSamples : (samplingParams.angleSamples - 1));
+            float deltaLength = radius / (samplingParams.includeBaseAsSample ? (samplingParams.speedSamples - 1) : samplingParams.speedSamples);
 
             // speed samples
-            for (int s = 0; s<=_samplingParams.speedSamples; s++) 
+            for (int s = 0; s<=samplingParams.speedSamples; s++) 
             {
-                float candidateLength = deltaLength * (_samplingParams.includeBaseAsSample ? s-1 : s);
+                float candidateLength = deltaLength * (samplingParams.includeBaseAsSample ? s-1 : s);
                 float candidateAngle = startAngle;
 
                 // angle samples
-                for (int a = 0; a < _samplingParams.angleSamples; a++, candidateAngle+=deltaAngle)
+                for (int a = 0; a < samplingParams.angleSamples; a++, candidateAngle+=deltaAngle)
                 {
                     // construct the candidate velocity
                     Vector3 velocity = baseV + baseDirection.Rotated(Vector3.Up, candidateAngle);
@@ -261,7 +258,7 @@ public abstract class CostFunction
                     }
 
                     // if we are currently checking the base velocity, we don't have to sample any more angles
-                    if (_samplingParams.includeBaseAsSample && s == 1)
+                    if (samplingParams.includeBaseAsSample && s == 1)
                         break;
 
                 }

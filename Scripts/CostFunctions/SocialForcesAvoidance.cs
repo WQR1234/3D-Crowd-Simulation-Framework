@@ -18,16 +18,23 @@ public class SocialForcesAvoidance: CostFunction
     public override Vector3 CalculateCostGradient(Vector3 velocity)
     {
         var position = _agent.Position;
-        float rangeSquared = Range * Range;
+        float rangeSquared = _agent.Range * _agent.Range;
 
         var agentForces = Vector3.Zero;
+        
         foreach (var neighborAgent in _agent.NeighborAgents)
         {
+            // GD.Print(_agent.Name+" nb: "+neighborAgent.Name+" "+(neighborAgent.Position-position).Length());
             if ((neighborAgent.Position-position).LengthSquared()<=rangeSquared)
             {
                 agentForces += ComputeAgentInteractionForce(neighborAgent);
             }
         }
+
+        var origin = _agent.Position + Vector3.Up * 0.2f;
+        DebugDraw3D.DrawArrow(origin, origin+agentForces*5, new Color(0, 1, 0), 0.2f);
+        
+        // GD.Print(_agent.Name+": "+agentForces+" V: "+_agent.Velocity);
 
         var obstacleForces = Vector3.Zero;
         foreach (var nearestPoint in _agent.NeighborObstacleNearestPoints)
@@ -47,6 +54,7 @@ public class SocialForcesAvoidance: CostFunction
     {
         Vector3 R = _agent.Position - otherAgent.Position;
         float magR = R.Length();
+        // GD.Print(magR);
 
         Vector3 Vb = _agent.Velocity - otherAgent.Velocity;
         Vector3 V = Vb * _dt;
@@ -64,7 +72,7 @@ public class SocialForcesAvoidance: CostFunction
 
         Vector3 force = _V0 / _sigma * Mathf.Exp(-b / _sigma) * (magR + magRminV) / (4 * b) *
                         (R / magR + RminV / magRminV);
-
+        
         float scale = _agent.Velocity.AngleTo(-R) < _viewingAngleHalf ? 1 : _scaleOutsideView;
         
         return scale * force;

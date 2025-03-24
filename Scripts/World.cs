@@ -30,6 +30,7 @@ public partial class World : Node
 
 		_navigationRegion = GetNode<NavigationRegion3D>("/root/Main/NavigationRegion3D");
 		// GD.Print(_navigationRegion.Name);
+		
 	}
 
 	public override void _PhysicsProcess(double delta)

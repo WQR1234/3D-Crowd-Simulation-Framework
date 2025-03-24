@@ -1,23 +1,16 @@
-[gd_scene load_steps=9 format=3 uid="uid://cb4o2mjfdlaeh"]
+[gd_scene load_steps=6 format=3 uid="uid://cb4o2mjfdlaeh"]
 
 [ext_resource type="Script" path="res://Scripts/CameraController.cs" id="3_5effp"]
-[ext_resource type="PackedScene" uid="uid://dm4tmxv4skfle" path="res://Scenes/hill.tscn" id="4_tfyhj"]
 [ext_resource type="Script" path="res://Scripts/UserInterface.cs" id="5_3s31g"]
 
 [sub_resource type="NavigationMesh" id="NavigationMesh_trviw"]
-cell_height = 0.1
-agent_max_climb = 0.1
+cell_height = 0.12
+agent_max_climb = 0.2
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_tl5cr"]
 
 [sub_resource type="ConvexPolygonShape3D" id="ConvexPolygonShape3D_c141p"]
 points = PackedVector3Array(-1, 0, -1, -1, 0, 1, 1, 0, -1, 1, 0, 1)
-
-[sub_resource type="BoxMesh" id="BoxMesh_0ljyb"]
-size = Vector3(2, 1, 1)
-
-[sub_resource type="ConvexPolygonShape3D" id="ConvexPolygonShape3D_clnqo"]
-points = PackedVector3Array(1, 0.5, 0.5, 1, 0.5, -0.5, -1, 0.5, 0.5, 1, -0.5, 0.5, 1, -0.5, -0.5, -1, 0.5, -0.5, -1, -0.5, 0.5, -1, -0.5, -0.5)
 
 [node name="Main" type="Node"]
 
@@ -70,19 +63,6 @@ mesh = SubResource("PlaneMesh_tl5cr")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="NavigationRegion3D/Ground"]
 shape = SubResource("ConvexPolygonShape3D_c141p")
-
-[node name="Hill" parent="NavigationRegion3D" instance=ExtResource("4_tfyhj")]
-transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -5.04826, 0.25, 4.52901)
-
-[node name="StaticBody3D" type="StaticBody3D" parent="NavigationRegion3D"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
-collision_layer = 2
-
-[node name="MeshInstance3D" type="MeshInstance3D" parent="NavigationRegion3D/StaticBody3D"]
-mesh = SubResource("BoxMesh_0ljyb")
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="NavigationRegion3D/StaticBody3D"]
-shape = SubResource("ConvexPolygonShape3D_clnqo")
 
 [connection signal="pressed" from="UserInterface/PauseButton" to="UserInterface" method="OnPauseButtonPressed"]
 [connection signal="pressed" from="UserInterface/ResetButton" to="UserInterface" method="OnResetButtonPressed"]
