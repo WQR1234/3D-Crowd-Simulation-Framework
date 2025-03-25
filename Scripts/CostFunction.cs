@@ -171,8 +171,6 @@ public abstract class CostFunction
 
     public Vector3 ApproximateGlobalMinimumBySampling(double delta)
     {
-        GD.Print(samplingParams.type, samplingParams.baseDirection, samplingParams.@base);
-        GD.Print(samplingParams.type==SamplingParameters.Type.Random, samplingParams.randomSamples);
         Vector3 baseV = Vector3.Zero;
         if (samplingParams.@base==SamplingParameters.Base.CurrentVelocity) 
             baseV = _agent.Velocity;
@@ -198,7 +196,6 @@ public abstract class CostFunction
 
         if (samplingParams.type==SamplingParameters.Type.Random) 
         {
-            GD.Print("random!!");
             for (int i = 0; i < samplingParams.randomSamples; i++)
             {
                 // create a random velocity in the cone/circle
