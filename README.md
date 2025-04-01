@@ -62,7 +62,7 @@ as well as convenient viewing of parameters during simulation.
 
 **Godot 4.4**
 
-**Plugin:** [[godot_debug_draw_3d](https://github.com/DmitriySalnikov/godot_debug_draw_3d)]()  to display agent motion trajectory
+**Plugin:** [godot_debug_draw_3d](https://github.com/DmitriySalnikov/godot_debug_draw_3d)  to display agent motion trajectory
 
 
 
