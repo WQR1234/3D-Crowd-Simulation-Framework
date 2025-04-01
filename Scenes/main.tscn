@@ -1,7 +1,7 @@
 [gd_scene load_steps=6 format=3 uid="uid://cb4o2mjfdlaeh"]
 
-[ext_resource type="Script" path="res://Scripts/CameraController.cs" id="3_5effp"]
-[ext_resource type="Script" path="res://Scripts/UserInterface.cs" id="5_3s31g"]
+[ext_resource type="Script" uid="uid://dpobnlobgwl5t" path="res://Scripts/CameraController.cs" id="3_5effp"]
+[ext_resource type="Script" uid="uid://cswvq86u64pol" path="res://Scripts/UserInterface.cs" id="5_3s31g"]
 
 [sub_resource type="NavigationMesh" id="NavigationMesh_trviw"]
 cell_height = 0.12
@@ -45,7 +45,7 @@ text = "加载场景"
 title = "Open a File"
 initial_position = 2
 size = Vector2i(375, 250)
-ok_button_text = "打开"
+ok_button_text = "Open"
 dialog_hide_on_ok = true
 file_mode = 0
 root_subfolder = "examples"
